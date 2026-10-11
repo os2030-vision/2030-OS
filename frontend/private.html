@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>PRIVATE VAULT v3.1 - LEGAL BRAIN + PUBLIC WATCHER</title>
+<title>PRIVATE VAULT v3.2 AUTO-LEARN</title>
 <style>
 body{background:#0a0f1f;color:#c0f0ff;font-family:Consolas,monospace;margin:0;padding:10px;display:flex;gap:10px;height:100vh;box-sizing:border-box}
 #lib{width:22%;border:1px solid #0ff3;padding:8px;overflow:auto}
@@ -24,8 +24,8 @@ h4{margin:8px 0 4px;color:#ff5af2;font-size:12px}
 </head>
 <body>
 <div id="lib">
-<h3>📚 VAULT v3.1</h3>
-<div style="color:#f5a;font-size:11px">OFFLINE | Legal Brain:ON | Watcher:READY</div>
+<h3>📚 VAULT v3.2 AUTO</h3>
+<div style="color:#0ff;font-size:11px">OFFLINE | Legal Brain:ON | Auto-Learn:READY</div>
 <div style="margin:8px 0"><button onclick="exportIndex()">EXPORT</button> <button class="pink" onclick="clearAll()">CLEAR</button></div>
 <div id="counts" style="font-size:12px;margin:6px 0">Legal:0 | All:0</div>
 <div id="folders"></div>
@@ -49,14 +49,12 @@ h4{margin:8px 0 4px;color:#ff5af2;font-size:12px}
 <button onclick="doAsk('spendthrift')">Spendthrift</button>
 <button onclick="doAsk('nrs')">NRS</button>
 </div>
-<div style="margin-top:12px;border:1px dashed #ff5af2;padding:6px">
-<h4>👁️ PUBLIC AI WATCHER - LIVE NOW</h4>
-<div style="font-size:10px">Watches me & Claude LOCALLY. Nothing uploads.</div>
-<textarea id="watchInput" placeholder="Paste answer from Meta AI / Claude about NRS 166..."></textarea>
-<button class="pink" onclick="learnPublic()">LEARN INTO VAULT</button>
-<button onclick="toggleWatch()">WATCH CLIPBOARD: <span id="watchStatus">OFF</span></button>
-<div id="watchLog" style="font-size:10px;margin-top:4px;max-height:80px;overflow:auto;color:#0ff"></div>
-<div style="font-size:9px;opacity:0.6;margin-top:4px">Ask here → Copy answer → Paste here → LEARN → Offline forever</div>
+<div style="margin-top:12px;border:2px solid #0ff;padding:6px;background:#0a1a33">
+<h4>👁️ AUTO-LEARN WATCHER - NO BUTTON NEEDED</h4>
+<div style="font-size:10px;color:#0ff">Turn ON → Copy from Meta AI/Claude → Ctrl+V anywhere → Auto-saves</div>
+<button class="pink" onclick="toggleWatch()" style="width:100%;margin-top:6px">WATCH CLIPBOARD: <span id="watchStatus">OFF - CLICK TO TURN ON</span></button>
+<div id="watchLog" style="font-size:10px;margin-top:6px;max-height:100px;overflow:auto;color:#0ff;border:1px solid #0ff2;padding:4px"></div>
+<textarea id="watchInput" style="display:none"></textarea>
 </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -115,7 +113,7 @@ function render(){
 }
 function openDoc(i){
  active=i; const d=docs[i];
- document.getElementById('viewHead').innerHTML=`<b>${d.name}</b> | ${d.folder} | <button onclick="copyExtract(${i})">COPY</button>`;
+ document.getElementById('viewHead').innerHTML=`<b>${d.name}</b> | ${d.folder}`;
  document.getElementById('viewText').innerText=d.text.slice(0,20000);
  const ex=d.extracted;
  let html=`<div class="extract-box"><h4>⚖️ LEGAL BRAIN</h4>`;
@@ -153,28 +151,24 @@ document.getElementById('find').addEventListener('input',e=>{
  });
  document.getElementById('searchRes').innerHTML=hits.join('');
 });
-function copyExtract(i){ navigator.clipboard.writeText(JSON.stringify(docs[i].extracted,null,2));}
 function exportIndex(){ const blob=new Blob([JSON.stringify(docs.map(d=>({name:d.name,folder:d.folder,extracted:d.extracted})),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='vault-legal-index.json'; a.click(); }
 function clearAll(){ if(confirm('Clear RAM?')){ docs.length=0; active=null; render(); document.getElementById('viewText').innerText='[Cleared]'; document.getElementById('extracted').innerHTML='';}}
 let watchOn=false;
-function learnPublic(){
-  const txt=document.getElementById('watchInput').value.trim(); if(!txt) return;
-  docs.push({name:`PublicAI ${new Date().toLocaleTimeString()}`, folder:'Learnings', text:txt, extracted:extractLegal(txt), size:txt.length, date:new Date().toISOString().slice(0,10)});
-  render();
-  document.getElementById('watchLog').innerHTML+=`<div style="color:#0ff">+ Learned ${txt.slice(0,60)}...</div>`;
-  document.getElementById('watchInput').value='';
-}
 function toggleWatch(){
-  watchOn=!watchOn; document.getElementById('watchStatus').innerText=watchOn?'ON':'OFF';
-  if(watchOn){ document.addEventListener('paste', onPasteWatch); logW('Watcher ON'); }
-  else document.removeEventListener('paste', onPasteWatch);
+  watchOn=!watchOn;
+  document.getElementById('watchStatus').innerText=watchOn?'ON - AUTO-LEARNING ACTIVE':'OFF - CLICK TO TURN ON';
+  document.getElementById('watchStatus').parentElement.style.background=watchOn?'#0ff':'#ff5af2';
+  if(watchOn){ document.addEventListener('paste', onPasteWatch); logW('✓ AUTO-LEARN ON - Copy from me/Claude, paste anywhere'); }
+  else{ document.removeEventListener('paste', onPasteWatch); logW('Watcher OFF'); }
 }
 function onPasteWatch(e){
   if(!watchOn) return;
   const t=(e.clipboardData||window.clipboardData).getData('text');
-  if(t && t.length>50 && /NRS|Trust|Trustee|Nevada|Article|Spendthrift|Tax/i.test(t)){
-    document.getElementById('watchInput').value=t;
-    logW('Captured - click LEARN');
+  if(t && t.length>30){
+    const extracted=extractLegal(t);
+    docs.push({name:`AutoLearn ${new Date().toLocaleTimeString()}`, folder:'Learnings', text:t, extracted, size:t.length, date:new Date().toISOString().slice(0,10)});
+    render();
+    document.getElementById('watchLog').innerHTML+=`<div style="color:#0ff;border-bottom:1px solid #0ff2;padding:2px 0">✓ ${new Date().toLocaleTimeString()} Auto-Learned: ${t.slice(0,70)}...</div>`;
   }
 }
 function logW(m){ document.getElementById('watchLog').innerHTML+=`<div>${new Date().toLocaleTimeString()} ${m}</div>`; }
