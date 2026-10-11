@@ -1,0 +1,182 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>PRIVATE VAULT v2 - ELK GROVE NODE</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+body{background:#0a0a0a;color:#e0e0e0;font-family:monospace;margin:0;display:flex;height:100vh}
+a{color:#00ff88}
+.left{width:280px;border-right:1px solid #333;padding:15px;overflow-y:auto;background:#0f0f0f}
+.center{flex:1;padding:15px;display:flex;flex-direction:column;overflow:hidden}
+.right{width:360px;border-left:1px solid #333;padding:15px;display:flex;flex-direction:column;background:#0f0f0f}
+.box{border:1px solid #222;padding:12px;margin:10px 0;background:#111}
+.btn{background:#00ff88;color:#000;border:0;padding:8px 14px;cursor:pointer;font-family:monospace;margin:3px}
+.btn2{background:#ff00ff;color:#fff;border:0;padding:8px 14px;cursor:pointer;font-family:monospace;margin:3px}
+#drop{border:2px dashed #ff00ff;padding:30px;text-align:center;cursor:pointer}
+.chat{flex:1;overflow-y:auto;background:#000;padding:10px;border:1px solid #222;font-size:13px}
+.doc-item{padding:8px;border:1px solid #222;margin:5px 0;cursor:pointer}
+.doc-item.active{border-color:#00ff88;background:#0a1a12}
+.tag{font-size:10px;padding:2px 6px;border:1px solid #444;margin-right:4px}
+.offline{color:#ff4444}.online{color:#00ff88}
+input,textarea{background:#000;color:#00ff88;border:1px solid #333;padding:8px;width:100%;font-family:monospace}
+</style>
+</head><body>
+
+<div class="left">
+<h3 style="color:#00ff88">📚 VAULT LIBRARY</h3>
+<div>Status: <span id="status" class="offline">OFFLINE MODE</span></div>
+<div style="margin:10px 0">
+<button class="btn" onclick="exportManifest()">EXPORT INDEX</button>
+<button class="btn2" onclick="clearVault()">WIPE</button>
+</div>
+<div id="counts" style="font-size:11px;color:#888"></div>
+<hr>
+<div><b>FOLDERS</b></div>
+<div id="folders"></div>
+<hr>
+<div id="docList"></div>
+<div style="margin-top:20px;font-size:11px;color:#555">
+v2 modular - Addons:<br>
+• doc-organizer ✓<br>
+• rag-search ✓<br>
+• market-analyzer → next<br>
+• legal-tax-knowledge → next
+</div>
+<a href="index.html">← COMMAND</a>
+</div>
+
+<div class="center">
+<div id="drop" onclick="document.getElementById('file').click()">
+DROP 50 LEGAL DOCS HERE (PDF/TXT) <br> <small>All stays in browser RAM, never uploads</small>
+<input type="file" id="file" multiple hidden accept=".pdf,.txt,.md">
+</div>
+<div class="box">
+<div style="display:flex;gap:10px">
+<div style="flex:1"><b id="docTitle">Select a document</b> <span id="docMeta"></span></div>
+<button class="btn" onclick="suggestName()">AUTO-RENAME</button>
+<button class="btn" onclick="organizeDoc()">MOVE TO FOLDER</button>
+</div>
+<textarea id="doctext" style="height:35vh" placeholder="Document text appears here..."></textarea>
+</div>
+<div class="box">
+<input id="globalSearch" placeholder="Quick find in vault: e.g. 'indemnity clause 2023'" oninput="searchVault(this.value)">
+<div id="searchRes" style="font-size:12px;max-height:100px;overflow-y:auto"></div>
+</div>
+</div>
+
+<div class="right">
+<h3>🤖 ASK VAULT</h3>
+<div class="chat" id="chat"><div>Load docs first. Then ask: "Find all NDA with non-compete" or "Summarize liability in this doc"</div></div>
+<input id="q" placeholder="Ask across all docs..." onkeydown="if(event.key==='Enter') ask()">
+<div style="display:flex;flex-wrap:wrap;margin-top:8px">
+<button class="btn" onclick="quickAsk('Summarize current doc in 5 bullets')">Summarize</button>
+<button class="btn" onclick="quickAsk('Extract parties, dates, obligations, amounts')">Extract</button>
+<button class="btn" onclick="quickAsk('Find risks and red flags')">Risks</button>
+<button class="btn" onclick="quickAsk('Compare this doc to other docs in same folder')">Compare</button>
+</div>
+<div class="box" style="font-size:11px">
+<b>EXTENSIBLE HOOKS (for next build)</b><br>
+window.VAULT.addTool(name, fn)<br>
+window.VAULT.docs = all docs<br>
+window.VAULT.current = active doc
+</div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let docs = []; let activeId = null;
+window.VAULT = { docs, addTool: (n,f)=>{window['tool_'+n]=f; chat.innerHTML+=`<div>[TOOL ADDED] ${n}</div>`} };
+
+const folderRules = {
+ 'Legal': ['agreement','contract','nda','liability','indemn','clause','court'],
+ 'Tax': ['irs','w2','1099','deduction','agi','ftb','tax'],
+ 'Trading': ['trade','paxg','ledger','tx','sell','buy','invoice'],
+};
+
+function categorize(text, name){
+ const t = (text+' '+name).toLowerCase();
+ for(let f in folderRules) if(folderRules[f].some(k=>t.includes(k))) return f;
+ return 'Unsorted';
+}
+
+async function loadFiles(list){
+ for(let f of list){
+  let text = '';
+  if(f.name.endsWith('.pdf')){
+   const buf = await f.arrayBuffer();
+   const pdf = await pdfjsLib.getDocument(buf).promise;
+   for(let i=1;i<=Math.min(pdf.numPages,20);i++){ const p=await pdf.getPage(i); const c=await p.getTextContent(); text+=c.items.map(it=>it.str).join(' ')+'\n'; }
+  } else { text = await f.text(); }
+  const doc = { id:Date.now()+Math.random(), name:f.name, size:f.size, text:text.slice(0,50000), folder:categorize(text,f.name), date:new Date().toISOString().slice(0,10) };
+  docs.push(doc);
+ }
+ render();
+}
+
+file.onchange = e=>loadFiles(e.target.files);
+drop.ondragover = e=>{e.preventDefault(); drop.style.borderColor='#00ff88'};
+drop.ondrop = e=>{e.preventDefault(); loadFiles(e.dataTransfer.files)};
+
+function render(){
+ docList.innerHTML = ''; folders.innerHTML=''; const counts={};
+ docs.forEach(d=>{ counts[d.folder]=(counts[d.folder]||0)+1; });
+ counts['All']=docs.length;
+ countsEl: countsDiv = document.getElementById('counts'); countsDiv.innerHTML = Object.entries(counts).map(([k,v])=>`${k}:${v}`).join(' | ');
+ document.getElementById('folders').innerHTML = Object.keys(counts).map(f=>`<div><span class="tag">${f}</span> ${counts[f]}</div>`).join('');
+ docs.forEach(d=>{
+  const el=document.createElement('div'); el.className='doc-item'+(d.id===activeId?' active':'');
+  el.innerHTML=`<b>${d.name}</b><br><span class="tag">${d.folder}</span> <span class="tag">${(d.text.length/1000).toFixed(1)}k</span>`;
+  el.onclick=()=>openDoc(d.id); docList.appendChild(el);
+ });
+ if(docs.length &&!activeId) openDoc(docs[0].id);
+}
+
+function openDoc(id){
+ activeId=id; const d=docs.find(x=>x.id===id); render();
+ docTitle.textContent=d.name; docMeta.textContent=`| ${d.folder} | ${d.date}`; doctext.value=d.text; window.VAULT.current=d;
+ chat.innerHTML+=`<div>[OPENED] ${d.name}</div>`;
+}
+
+function searchVault(q){
+ if(!q || q.length<2){searchRes.innerHTML=''; return;}
+ const hits = docs.filter(d=>d.text.toLowerCase().includes(q.toLowerCase())).slice(0,10);
+ searchRes.innerHTML = hits.map(h=>`<div onclick="openDoc(${h.id})" style="cursor:pointer;border-bottom:1px solid #222;padding:3px">📄 ${h.name} - ${h.folder}</div>`).join('') || 'No hits';
+}
+
+function suggestName(){
+ const d=docs.find(x=>x.id===activeId); if(!d) return;
+ const m = d.text.match(/(20\d{2})/); const year = m?m[1]:'2025';
+ const base = d.folder==='Legal'? `Agreement-${year}` : d.folder==='Tax'? `TaxDoc-${year}` : `Doc-${year}`;
+ const suggestion = `${year}-${d.folder}-${base}-${d.name}`.replace(/[^a-zA-Z0-9\-\.]/g,'-');
+ doctext.value = `SUGGESTED NAME: ${suggestion}\n\n`+doctext.value;
+}
+
+function organizeDoc(){ const d=docs.find(x=>x.id===activeId); if(!d) return; alert(`Would move to /${d.folder}/${d.name} in ~/private-vault/ - hook ready for python sidecar`); }
+
+async function ask(){
+ const question = q.value.trim(); if(!question) return;
+ chat.innerHTML+=`<div><b>YOU:</b> ${question}</div>`; q.value='';
+ // 1. Try local RAG first (offline)
+ const relevant = docs.filter(d=>question.toLowerCase().split(' ').some(w=>w.length>3 && d.text.toLowerCase().includes(w))).slice(0,3);
+ const context = relevant.map(r=>`[${r.name}]: ${r.text.slice(0,3000)}`).join('\n---\n');
+ // 2. Try colibri if online
+ try{
+  const res = await fetch('http://localhost:8000/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'glm-5.2',messages:[{role:'system',content:`You are private vault AI. Use these docs to answer: ${context.slice(0,12000)}`},{role:'user',content:question}]})});
+  const data = await res.json(); const ans = data.choices[0].message.content;
+  chat.innerHTML+=`<div><b>PRIVATE BOT (colibri):</b> ${ans}</div>`;
+  document.getElementById('status').textContent='ONLINE - colibri'; document.getElementById('status').className='online';
+ }catch(e){
+  // offline fallback - simple keyword answer
+  let fallback = `OFFLINE SEARCH (colibri not running yet):\nFound in ${relevant.length} docs:\n`+relevant.map(r=>`• ${r.name} (${r.folder})`).join('\n');
+  if(activeId) fallback+=`\n\nCurrent doc excerpt: ${docs.find(x=>x.id===activeId).text.slice(0,800)}`;
+  chat.innerHTML+=`<div style="white-space:pre-wrap"><b>VAULT SEARCH:</b> ${fallback}\n\nTip: Run COLI_MODEL=/nvme/glm52_i4./coli serve for AI answers</div>`;
+ }
+ chat.scrollTop = chat.scrollHeight;
+}
+function quickAsk(t){ q.value=t; ask(); }
+function exportManifest(){ const blob=new Blob([JSON.stringify(docs.map(d=>({name:d.name,folder:d.folder,size:d.size,date:d.date})),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='vault-index.json'; a.click(); }
+function clearVault(){ if(confirm('Clear all docs from browser memory? Files stay on disk')){docs=[]; activeId=null; render(); docTitle.textContent='Select a document'; doctext.value='';} }
+
+// check colibri
+fetch('http://localhost:8000/v1/models').then(()=>{status.textContent='ONLINE - colibri ready';status.className='online'}).catch(()=>{});
+</script>
+</body></html>
