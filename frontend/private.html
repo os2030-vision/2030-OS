@@ -1,177 +1,83 @@
 <!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>PRIVATE VAULT v3.2 AUTO-LEARN</title>
-<style>
-body{background:#0a0f1f;color:#c0f0ff;font-family:Consolas,monospace;margin:0;padding:10px;display:flex;gap:10px;height:100vh;box-sizing:border-box}
-#lib{width:22%;border:1px solid #0ff3;padding:8px;overflow:auto}
-#main{width:56%;border:1px dashed #ff5af2;padding:8px;display:flex;flex-direction:column;gap:8px;overflow:auto}
-#ask{width:22%;border:1px solid #5af; padding:8px;overflow:auto}
-.drop{border:2px dashed #0ff;padding:20px;text-align:center;cursor:pointer;background:#0ff1}
-.doc{background:#122040;margin:4px 0;padding:6px;cursor:pointer;border-left:3px solid #0ff}
-.doc.active{border-left-color:#ff5af2;background:#1a2a50}
-.extract-box{background:#0a1a33;border:1px solid #ff5af2;padding:8px;margin:6px 0;font-size:12px}
-.tag{display:inline-block;background:#0ff2;color:#0ff;padding:2px 6px;margin:2px;font-size:11px;border:1px solid #0ff}
-.tag2{background:#f0f2;color:#f5a;border:1px solid #f5a;padding:2px 6px;margin:2px;font-size:11px;display:inline-block}
-button{background:#0ff;color:#001;border:0;padding:6px 10px;cursor:pointer;font-family:inherit;font-weight:bold;margin:2px}
-button.pink{background:#ff5af2;color:#fff}
-pre{white-space:pre-wrap;word-break:break-word;background:#081020;padding:8px;max-height:350px;overflow:auto;font-size:12px}
-input,textarea{width:100%;background:#081020;color:#0ff;border:1px solid #0ff;padding:8px;box-sizing:border-box;font-family:inherit}
-h3{margin:4px 0;color:#0ff;font-size:14px}
-h4{margin:8px 0 4px;color:#ff5af2;font-size:12px}
-</style>
-</head>
-<body>
-<div id="lib">
-<h3>📚 VAULT v3.2 AUTO</h3>
-<div style="color:#0ff;font-size:11px">OFFLINE | Legal Brain:ON | Auto-Learn:READY</div>
-<div style="margin:8px 0"><button onclick="exportIndex()">EXPORT</button> <button class="pink" onclick="clearAll()">CLEAR</button></div>
-<div id="counts" style="font-size:12px;margin:6px 0">Legal:0 | All:0</div>
-<div id="folders"></div>
-<div id="doclist"></div>
+<html><head><meta charset="utf-8"><title>VAULT v3.3 AUTO</title>
+<style>body{background:#0a0e1a;color:#c0c0c0;font-family:monospace;padding:20px}
+#drop{border:2px dashed #00ff88;padding:40px;text-align:center;cursor:pointer;margin:20px 0;border-radius:10px}
+#drop:hover{border-color:cyan;background:#0f1f2f}
+.badge{color:cyan} #log{height:200px;overflow:auto;border:1px solid #333;padding:10px}</style>
+</head><body>
+<h2>VAULT v3.3 AUTO - <span id="watchStatus">WATCH: ON</span></h2>
+<div>Legal:<span id="legalC">0</span> | Learnings:<span id="learnC">0</span> | All:<span id="allC">0</span>
+<button onclick="exportVault()">EXPORT</button>
+<button id="watchBtn" onclick="toggleWatch()">WATCH CLIPBOARD: ON</button></div>
+
+<div id="drop" onclick="document.getElementById('fileInput').click()">
+CLICK HERE or DROP 50 LEGAL DOCS HERE<br><small>Your desktop files will open - select PDFs</small>
+<input type="file" id="fileInput" multiple accept=".pdf,.txt,.docx" style="display:none" onchange="handleFiles(this.files)">
 </div>
-<div id="main">
-<div class="drop" id="drop">DROP 50 LEGAL DOCS HERE (PDF/TXT)<br><small>All stays in browser RAM</small></div>
-<div id="viewHead" style="font-size:12px"></div>
-<div id="extracted"></div>
-<pre id="viewText">[Drop docs to start Legal Brain]</pre>
-<div><input id="find" placeholder="Quick find: 'Spendthrift' 'Trustee indemnity'"></div>
-<div id="searchRes" style="font-size:11px"></div>
+
+<div style="display:flex;gap:20px">
+<div style="flex:1"><h3>Folders</h3><div id="folders"></div></div>
+<div style="flex:2"><h3>Content</h3><div id="content"></div></div>
+<div style="flex:1"><h3>Legal Brain</h3>
+<input id="find" placeholder="Quick find: NRS, Trustee..." oninput="doFind(this.value)" style="width:100%">
+<div id="log">Watching & Learning...</div></div>
 </div>
-<div id="ask">
-<h3>🧠 ASK VAULT</h3>
-<input id="askInput" placeholder="Who is Protector?">
-<div id="askOut" style="margin-top:8px;font-size:12px;white-space:pre-wrap"></div>
-<div style="margin-top:6px">
-<button onclick="doAsk('protector')">Protector</button>
-<button onclick="doAsk('trustee')">Trustees</button>
-<button onclick="doAsk('spendthrift')">Spendthrift</button>
-<button onclick="doAsk('nrs')">NRS</button>
-</div>
-<div style="margin-top:12px;border:2px solid #0ff;padding:6px;background:#0a1a33">
-<h4>👁️ AUTO-LEARN WATCHER - NO BUTTON NEEDED</h4>
-<div style="font-size:10px;color:#0ff">Turn ON → Copy from Meta AI/Claude → Ctrl+V anywhere → Auto-saves</div>
-<button class="pink" onclick="toggleWatch()" style="width:100%;margin-top:6px">WATCH CLIPBOARD: <span id="watchStatus">OFF - CLICK TO TURN ON</span></button>
-<div id="watchLog" style="font-size:10px;margin-top:6px;max-height:100px;overflow:auto;color:#0ff;border:1px solid #0ff2;padding:4px"></div>
-<textarea id="watchInput" style="display:none"></textarea>
-</div>
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-let docs=[]; let active=null;
-window.VAULT={docs, addTool:(n,f)=>{console.log('Tool',n); f();}};
+let docs=[]; let watchOn=true;
+function toggleWatch(){watchOn=!watchOn; document.getElementById('watchStatus').innerText=watchOn?'WATCH: ON':'WATCH: OFF';
+document.getElementById('watchBtn').innerText=watchOn?'WATCH CLIPBOARD: ON':'WATCH CLIPBOARD: OFF';
+document.getElementById('watchBtn').style.color=watchOn?'cyan':'red';}
+
 const drop=document.getElementById('drop');
-drop.addEventListener('dragover',e=>{e.preventDefault(); drop.style.background='#0ff3'});
-drop.addEventListener('dragleave',()=>drop.style.background='#0ff1');
-drop.addEventListener('drop',async e=>{
- e.preventDefault(); drop.style.background='#0ff1';
- for(let f of [...e.dataTransfer.files]) await loadFile(f);
- render();
+drop.addEventListener('dragover',e=>{e.preventDefault(); drop.style.borderColor='cyan';});
+drop.addEventListener('dragleave',e=>{drop.style.borderColor='#00ff88';});
+drop.addEventListener('drop',e=>{e.preventDefault(); handleFiles(e.dataTransfer.files);});
+
+function handleFiles(files){
+for(let f of files){
+let reader=new FileReader();
+reader.onload=e=>{
+let text=e.target.result.substring(0,50000);
+let entry={id:Date.now()+Math.random(), name:f.name, text:text, time:new Date().toLocaleTimeString(), tags:extractTags(text), type:f.name.endsWith('.pdf')?'Legal':'Learning'};
+docs.push(entry); render();
+log(`Loaded: ${f.name}`);
+};
+if(f.name.endsWith('.txt')) reader.readAsText(f); else reader.readAsArrayBuffer(f) && reader.readAsText(f);
+}
+}
+function extractTags(t){let m=t.match(/NRS\s*\d+\.\d+/gi); return m?[...new Set(m)]:[];}
+
+document.addEventListener('paste',e=>{
+if(!watchOn) return;
+let text=(e.clipboardData||window.clipboardData).getData('text');
+if(text && text.length>30){
+let entry={id:Date.now(), name:`AutoLearn ${new Date().toLocaleTimeString()}`, text:text, time:new Date().toLocaleTimeString(), tags:extractTags(text), type:'Learning'};
+docs.push(entry); render(); log(`Auto-Learned: ${text.substring(0,60)}...`);
+}
 });
-async function loadFile(file){
- let text='';
- if(file.name.endsWith('.pdf')){
-   const buf=await file.arrayBuffer();
-   const pdf=await pdfjsLib.getDocument(buf).promise;
-   for(let i=1;i<=pdf.numPages;i++){
-     const page=await pdf.getPage(i);
-     const c=await page.getTextContent();
-     text+=c.items.map(it=>it.str).join(' ')+'\n';
-   }
- }else{ text=await file.text(); }
- let folder='Legal';
- if(/tax|irs/i.test(text)) folder='Tax';
- if(/trade|paxg/i.test(text)) folder='Trading';
- docs.push({name:file.name, folder, text, extracted:extractLegal(text), size:file.size, date:new Date().toISOString().slice(0,10)});
-}
-function extractLegal(t){
- const out={parties:[], statutes:[], articles:[], dates:[], protector:null, trustees:[], spendthrift:null};
- const nrs=[...t.matchAll(/NRS\s*\d+[A-Z\.\d]*|Nevada Revised Statutes Chapter\s*\d+/gi)].map(m=>m[0]);
- out.statutes=[...new Set(nrs)].slice(0,10);
- const arts=[...t.matchAll(/Article\s+([IVX]+|\d+)\s*[-–]\s*([A-Za-z,]+)/gi)].map(m=>`Article ${m[1]} - ${m[2].trim()}`);
- out.articles=[...new Set(arts)].slice(0,20);
- const protectorMatch=t.match(/Trust Protector:\s*\[?([^\]\n]+)\]?/i);
- if(protectorMatch) out.protector=protectorMatch[1].trim();
- const trusteeMatches=[...t.matchAll(/Co-Trustee(?:\s*\(.*?\))?:\s*\[?([^\]\n]+)\]?/gi)];
- out.trustees=trusteeMatches.map(m=>m[1].trim()).slice(0,5);
- const settlor=t.match(/Settlor\s*\/\s*Grantor:\s*\[?([^\]\n]+)\]?/i);
- if(settlor) out.parties.push('Settlor: '+settlor[1].trim());
- if(out.protector) out.parties.push('Protector: '+out.protector);
- out.trustees.forEach(tr=>out.parties.push('Co-Trustee: '+tr));
- const spIdx=t.toLowerCase().indexOf('spendthrift');
- if(spIdx>-1) out.spendthrift=t.substring(Math.max(0,spIdx-100), spIdx+300).replace(/\s+/g,' ').slice(0,400);
- return out;
-}
+
 function render(){
- document.getElementById('counts').innerText=`Legal:${docs.filter(d=>d.folder==='Legal').length} | Learnings:${docs.filter(d=>d.folder==='Learnings').length} | All:${docs.length}`;
- const folders={}; docs.forEach(d=>{folders[d.folder]=(folders[d.folder]||0)+1});
- document.getElementById('folders').innerHTML=Object.entries(folders).map(([k,v])=>`<div class="tag">${k} ${v}</div>`).join('');
- document.getElementById('doclist').innerHTML=docs.map((d,i)=>`<div class="doc ${active===i?'active':''}" onclick="openDoc(${i})"><b>${d.name}</b><br><span class="tag">${d.folder}</span> <span class="tag2">${(d.size/1024).toFixed(1)}k</span></div>`).join('');
- if(docs.length && active===null) openDoc(0);
+document.getElementById('legalC').innerText=docs.filter(d=>d.type!=='Learning').length;
+document.getElementById('learnC').innerText=docs.filter(d=>d.type==='Learning').length;
+document.getElementById('allC').innerText=docs.length;
+let fDiv=document.getElementById('folders'); fDiv.innerHTML='';
+let groups={}; docs.forEach(d=>{let k=d.type; if(!groups[k]) groups[k]=[]; groups[k].push(d);});
+for(let k in groups){fDiv.innerHTML+=`<div onclick="showGroup('${k}')"><span class="badge">${k}</span> ${groups[k].length}</div>`;}
+if(docs.length) showGroup(Object.keys(groups)[0]);
 }
-function openDoc(i){
- active=i; const d=docs[i];
- document.getElementById('viewHead').innerHTML=`<b>${d.name}</b> | ${d.folder}`;
- document.getElementById('viewText').innerText=d.text.slice(0,20000);
- const ex=d.extracted;
- let html=`<div class="extract-box"><h4>⚖️ LEGAL BRAIN</h4>`;
- html+=`<b>Parties:</b><br>${ex.parties.map(p=>`<span class="tag2">${p}</span>`).join('')||'—'}<br>`;
- html+=`<b>Statutes:</b> ${ex.statutes.map(s=>`<span class="tag">${s}</span>`).join('')||'—'}<br>`;
- html+=`<b>Articles:</b><br><small>${ex.articles.join(' | ')}</small><br>`;
- if(ex.spendthrift) html+=`<b>Spendthrift:</b><br><small style="color:#fffa">${ex.spendthrift}</small>`;
- html+=`</div>`;
- document.getElementById('extracted').innerHTML=html;
- render();
-}
-function doAsk(q){
- const input=document.getElementById('askInput'); if(q) input.value=q;
- const query=(input.value||q||'').toLowerCase();
- let out='';
- if(!docs.length) out='Load docs first';
- else if(query.includes('protector')) out=docs.map(d=>`${d.name}: Protector=${d.extracted.protector||'—'}`).join('\n');
- else if(query.includes('trustee')) out=docs.map(d=>`${d.name}: ${d.extracted.trustees.join(', ')}`).join('\n');
- else if(query.includes('spendthrift')) out=docs.map(d=>`${d.name}: ${d.extracted.spendthrift||'—'}`).join('\n---\n');
- else if(query.includes('nrs')) out=docs.map(d=>`${d.name}: ${d.extracted.statutes.join(', ')}`).join('\n');
- else{
-   const hits=[]; docs.forEach(d=>{
-     const idx=d.text.toLowerCase().indexOf(query);
-     if(idx>-1) hits.push(`${d.name}:...${d.text.substring(Math.max(0,idx-80), idx+200)}...`);
-   });
-   out=hits.length?hits.join('\n---\n'):'No hits';
- }
- document.getElementById('askOut').innerText=out;
-}
-document.getElementById('askInput').addEventListener('keydown',e=>{if(e.key==='Enter') doAsk();});
-document.getElementById('find').addEventListener('input',e=>{
- const q=e.target.value.toLowerCase(); if(!q){document.getElementById('searchRes').innerHTML=''; return;}
- let hits=[]; docs.forEach(d=>{
-   let idx=0,c=0; while((idx=d.text.toLowerCase().indexOf(q,idx))>-1 && c<3){ hits.push(`<div><b>${d.name}</b>:...${d.text.substring(Math.max(0,idx-60), idx+120)}...</div>`); idx+=q.length; c++; }
- });
- document.getElementById('searchRes').innerHTML=hits.join('');
+function showGroup(k){
+let c=document.getElementById('content'); c.innerHTML='';
+docs.filter(d=>d.type===k).forEach(d=>{
+c.innerHTML+=`<div style="border:1px solid #333;margin:5px;padding:8px"><b>${d.name}</b> <span class="badge">${d.tags.join(', ')}</span><br><small>${d.text.substring(0,300)}</small></div>`;
 });
-function exportIndex(){ const blob=new Blob([JSON.stringify(docs.map(d=>({name:d.name,folder:d.folder,extracted:d.extracted})),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='vault-legal-index.json'; a.click(); }
-function clearAll(){ if(confirm('Clear RAM?')){ docs.length=0; active=null; render(); document.getElementById('viewText').innerText='[Cleared]'; document.getElementById('extracted').innerHTML='';}}
-let watchOn=false;
-function toggleWatch(){
-  watchOn=!watchOn;
-  document.getElementById('watchStatus').innerText=watchOn?'ON - AUTO-LEARNING ACTIVE':'OFF - CLICK TO TURN ON';
-  document.getElementById('watchStatus').parentElement.style.background=watchOn?'#0ff':'#ff5af2';
-  if(watchOn){ document.addEventListener('paste', onPasteWatch); logW('✓ AUTO-LEARN ON - Copy from me/Claude, paste anywhere'); }
-  else{ document.removeEventListener('paste', onPasteWatch); logW('Watcher OFF'); }
 }
-function onPasteWatch(e){
-  if(!watchOn) return;
-  const t=(e.clipboardData||window.clipboardData).getData('text');
-  if(t && t.length>30){
-    const extracted=extractLegal(t);
-    docs.push({name:`AutoLearn ${new Date().toLocaleTimeString()}`, folder:'Learnings', text:t, extracted, size:t.length, date:new Date().toISOString().slice(0,10)});
-    render();
-    document.getElementById('watchLog').innerHTML+=`<div style="color:#0ff;border-bottom:1px solid #0ff2;padding:2px 0">✓ ${new Date().toLocaleTimeString()} Auto-Learned: ${t.slice(0,70)}...</div>`;
-  }
+function doFind(q){if(!q) return render(); let c=document.getElementById('content'); c.innerHTML='';
+docs.filter(d=>d.text.toLowerCase().includes(q.toLowerCase())).forEach(d=>{
+c.innerHTML+=`<div style="border:1px solid cyan;margin:5px;padding:8px"><b>${d.name}</b><br>${d.text.substring(0,400)}</div>`;
+});
 }
-function logW(m){ document.getElementById('watchLog').innerHTML+=`<div>${new Date().toLocaleTimeString()} ${m}</div>`; }
-</script>
-</body>
-</html>
+function log(m){let l=document.getElementById('log'); l.innerHTML=`${new Date().toLocaleTimeString()} ${m}<br>`+l.innerHTML;}
+function exportVault(){let blob=new Blob([JSON.stringify(docs)],{type:'application/json'}); let a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='vault-export.json'; a.click();}
+render();
+</script></body></html>
