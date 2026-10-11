@@ -1,182 +1,183 @@
-<!doctype html><html><head><meta charset="utf-8">
-<title>PRIVATE VAULT v2 - ELK GROVE NODE</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>PRIVATE VAULT v3.1 - LEGAL BRAIN + PUBLIC WATCHER</title>
 <style>
-body{background:#0a0a0a;color:#e0e0e0;font-family:monospace;margin:0;display:flex;height:100vh}
-a{color:#00ff88}
-.left{width:280px;border-right:1px solid #333;padding:15px;overflow-y:auto;background:#0f0f0f}
-.center{flex:1;padding:15px;display:flex;flex-direction:column;overflow:hidden}
-.right{width:360px;border-left:1px solid #333;padding:15px;display:flex;flex-direction:column;background:#0f0f0f}
-.box{border:1px solid #222;padding:12px;margin:10px 0;background:#111}
-.btn{background:#00ff88;color:#000;border:0;padding:8px 14px;cursor:pointer;font-family:monospace;margin:3px}
-.btn2{background:#ff00ff;color:#fff;border:0;padding:8px 14px;cursor:pointer;font-family:monospace;margin:3px}
-#drop{border:2px dashed #ff00ff;padding:30px;text-align:center;cursor:pointer}
-.chat{flex:1;overflow-y:auto;background:#000;padding:10px;border:1px solid #222;font-size:13px}
-.doc-item{padding:8px;border:1px solid #222;margin:5px 0;cursor:pointer}
-.doc-item.active{border-color:#00ff88;background:#0a1a12}
-.tag{font-size:10px;padding:2px 6px;border:1px solid #444;margin-right:4px}
-.offline{color:#ff4444}.online{color:#00ff88}
-input,textarea{background:#000;color:#00ff88;border:1px solid #333;padding:8px;width:100%;font-family:monospace}
+body{background:#0a0f1f;color:#c0f0ff;font-family:Consolas,monospace;margin:0;padding:10px;display:flex;gap:10px;height:100vh;box-sizing:border-box}
+#lib{width:22%;border:1px solid #0ff3;padding:8px;overflow:auto}
+#main{width:56%;border:1px dashed #ff5af2;padding:8px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+#ask{width:22%;border:1px solid #5af; padding:8px;overflow:auto}
+.drop{border:2px dashed #0ff;padding:20px;text-align:center;cursor:pointer;background:#0ff1}
+.doc{background:#122040;margin:4px 0;padding:6px;cursor:pointer;border-left:3px solid #0ff}
+.doc.active{border-left-color:#ff5af2;background:#1a2a50}
+.extract-box{background:#0a1a33;border:1px solid #ff5af2;padding:8px;margin:6px 0;font-size:12px}
+.tag{display:inline-block;background:#0ff2;color:#0ff;padding:2px 6px;margin:2px;font-size:11px;border:1px solid #0ff}
+.tag2{background:#f0f2;color:#f5a;border:1px solid #f5a;padding:2px 6px;margin:2px;font-size:11px;display:inline-block}
+button{background:#0ff;color:#001;border:0;padding:6px 10px;cursor:pointer;font-family:inherit;font-weight:bold;margin:2px}
+button.pink{background:#ff5af2;color:#fff}
+pre{white-space:pre-wrap;word-break:break-word;background:#081020;padding:8px;max-height:350px;overflow:auto;font-size:12px}
+input,textarea{width:100%;background:#081020;color:#0ff;border:1px solid #0ff;padding:8px;box-sizing:border-box;font-family:inherit}
+h3{margin:4px 0;color:#0ff;font-size:14px}
+h4{margin:8px 0 4px;color:#ff5af2;font-size:12px}
 </style>
-</head><body>
-
-<div class="left">
-<h3 style="color:#00ff88">📚 VAULT LIBRARY</h3>
-<div>Status: <span id="status" class="offline">OFFLINE MODE</span></div>
-<div style="margin:10px 0">
-<button class="btn" onclick="exportManifest()">EXPORT INDEX</button>
-<button class="btn2" onclick="clearVault()">WIPE</button>
-</div>
-<div id="counts" style="font-size:11px;color:#888"></div>
-<hr>
-<div><b>FOLDERS</b></div>
+</head>
+<body>
+<div id="lib">
+<h3>📚 VAULT v3.1</h3>
+<div style="color:#f5a;font-size:11px">OFFLINE | Legal Brain:ON | Watcher:READY</div>
+<div style="margin:8px 0"><button onclick="exportIndex()">EXPORT</button> <button class="pink" onclick="clearAll()">CLEAR</button></div>
+<div id="counts" style="font-size:12px;margin:6px 0">Legal:0 | All:0</div>
 <div id="folders"></div>
-<hr>
-<div id="docList"></div>
-<div style="margin-top:20px;font-size:11px;color:#555">
-v2 modular - Addons:<br>
-• doc-organizer ✓<br>
-• rag-search ✓<br>
-• market-analyzer → next<br>
-• legal-tax-knowledge → next
+<div id="doclist"></div>
 </div>
-<a href="index.html">← COMMAND</a>
+<div id="main">
+<div class="drop" id="drop">DROP 50 LEGAL DOCS HERE (PDF/TXT)<br><small>All stays in browser RAM</small></div>
+<div id="viewHead" style="font-size:12px"></div>
+<div id="extracted"></div>
+<pre id="viewText">[Drop docs to start Legal Brain]</pre>
+<div><input id="find" placeholder="Quick find: 'Spendthrift' 'Trustee indemnity'"></div>
+<div id="searchRes" style="font-size:11px"></div>
 </div>
-
-<div class="center">
-<div id="drop" onclick="document.getElementById('file').click()">
-DROP 50 LEGAL DOCS HERE (PDF/TXT) <br> <small>All stays in browser RAM, never uploads</small>
-<input type="file" id="file" multiple hidden accept=".pdf,.txt,.md">
+<div id="ask">
+<h3>🧠 ASK VAULT</h3>
+<input id="askInput" placeholder="Who is Protector?">
+<div id="askOut" style="margin-top:8px;font-size:12px;white-space:pre-wrap"></div>
+<div style="margin-top:6px">
+<button onclick="doAsk('protector')">Protector</button>
+<button onclick="doAsk('trustee')">Trustees</button>
+<button onclick="doAsk('spendthrift')">Spendthrift</button>
+<button onclick="doAsk('nrs')">NRS</button>
 </div>
-<div class="box">
-<div style="display:flex;gap:10px">
-<div style="flex:1"><b id="docTitle">Select a document</b> <span id="docMeta"></span></div>
-<button class="btn" onclick="suggestName()">AUTO-RENAME</button>
-<button class="btn" onclick="organizeDoc()">MOVE TO FOLDER</button>
-</div>
-<textarea id="doctext" style="height:35vh" placeholder="Document text appears here..."></textarea>
-</div>
-<div class="box">
-<input id="globalSearch" placeholder="Quick find in vault: e.g. 'indemnity clause 2023'" oninput="searchVault(this.value)">
-<div id="searchRes" style="font-size:12px;max-height:100px;overflow-y:auto"></div>
-</div>
-</div>
-
-<div class="right">
-<h3>🤖 ASK VAULT</h3>
-<div class="chat" id="chat"><div>Load docs first. Then ask: "Find all NDA with non-compete" or "Summarize liability in this doc"</div></div>
-<input id="q" placeholder="Ask across all docs..." onkeydown="if(event.key==='Enter') ask()">
-<div style="display:flex;flex-wrap:wrap;margin-top:8px">
-<button class="btn" onclick="quickAsk('Summarize current doc in 5 bullets')">Summarize</button>
-<button class="btn" onclick="quickAsk('Extract parties, dates, obligations, amounts')">Extract</button>
-<button class="btn" onclick="quickAsk('Find risks and red flags')">Risks</button>
-<button class="btn" onclick="quickAsk('Compare this doc to other docs in same folder')">Compare</button>
-</div>
-<div class="box" style="font-size:11px">
-<b>EXTENSIBLE HOOKS (for next build)</b><br>
-window.VAULT.addTool(name, fn)<br>
-window.VAULT.docs = all docs<br>
-window.VAULT.current = active doc
+<div style="margin-top:12px;border:1px dashed #ff5af2;padding:6px">
+<h4>👁️ PUBLIC AI WATCHER - LIVE NOW</h4>
+<div style="font-size:10px">Watches me & Claude LOCALLY. Nothing uploads.</div>
+<textarea id="watchInput" placeholder="Paste answer from Meta AI / Claude about NRS 166..."></textarea>
+<button class="pink" onclick="learnPublic()">LEARN INTO VAULT</button>
+<button onclick="toggleWatch()">WATCH CLIPBOARD: <span id="watchStatus">OFF</span></button>
+<div id="watchLog" style="font-size:10px;margin-top:4px;max-height:80px;overflow:auto;color:#0ff"></div>
+<div style="font-size:9px;opacity:0.6;margin-top:4px">Ask here → Copy answer → Paste here → LEARN → Offline forever</div>
 </div>
 </div>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-let docs = []; let activeId = null;
-window.VAULT = { docs, addTool: (n,f)=>{window['tool_'+n]=f; chat.innerHTML+=`<div>[TOOL ADDED] ${n}</div>`} };
-
-const folderRules = {
- 'Legal': ['agreement','contract','nda','liability','indemn','clause','court'],
- 'Tax': ['irs','w2','1099','deduction','agi','ftb','tax'],
- 'Trading': ['trade','paxg','ledger','tx','sell','buy','invoice'],
-};
-
-function categorize(text, name){
- const t = (text+' '+name).toLowerCase();
- for(let f in folderRules) if(folderRules[f].some(k=>t.includes(k))) return f;
- return 'Unsorted';
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+let docs=[]; let active=null;
+window.VAULT={docs, addTool:(n,f)=>{console.log('Tool',n); f();}};
+const drop=document.getElementById('drop');
+drop.addEventListener('dragover',e=>{e.preventDefault(); drop.style.background='#0ff3'});
+drop.addEventListener('dragleave',()=>drop.style.background='#0ff1');
+drop.addEventListener('drop',async e=>{
+ e.preventDefault(); drop.style.background='#0ff1';
+ for(let f of [...e.dataTransfer.files]) await loadFile(f);
+ render();
+});
+async function loadFile(file){
+ let text='';
+ if(file.name.endsWith('.pdf')){
+   const buf=await file.arrayBuffer();
+   const pdf=await pdfjsLib.getDocument(buf).promise;
+   for(let i=1;i<=pdf.numPages;i++){
+     const page=await pdf.getPage(i);
+     const c=await page.getTextContent();
+     text+=c.items.map(it=>it.str).join(' ')+'\n';
+   }
+ }else{ text=await file.text(); }
+ let folder='Legal';
+ if(/tax|irs/i.test(text)) folder='Tax';
+ if(/trade|paxg/i.test(text)) folder='Trading';
+ docs.push({name:file.name, folder, text, extracted:extractLegal(text), size:file.size, date:new Date().toISOString().slice(0,10)});
 }
-
-async function loadFiles(list){
- for(let f of list){
-  let text = '';
-  if(f.name.endsWith('.pdf')){
-   const buf = await f.arrayBuffer();
-   const pdf = await pdfjsLib.getDocument(buf).promise;
-   for(let i=1;i<=Math.min(pdf.numPages,20);i++){ const p=await pdf.getPage(i); const c=await p.getTextContent(); text+=c.items.map(it=>it.str).join(' ')+'\n'; }
-  } else { text = await f.text(); }
-  const doc = { id:Date.now()+Math.random(), name:f.name, size:f.size, text:text.slice(0,50000), folder:categorize(text,f.name), date:new Date().toISOString().slice(0,10) };
-  docs.push(doc);
- }
+function extractLegal(t){
+ const out={parties:[], statutes:[], articles:[], dates:[], protector:null, trustees:[], spendthrift:null};
+ const nrs=[...t.matchAll(/NRS\s*\d+[A-Z\.\d]*|Nevada Revised Statutes Chapter\s*\d+/gi)].map(m=>m[0]);
+ out.statutes=[...new Set(nrs)].slice(0,10);
+ const arts=[...t.matchAll(/Article\s+([IVX]+|\d+)\s*[-–]\s*([A-Za-z,]+)/gi)].map(m=>`Article ${m[1]} - ${m[2].trim()}`);
+ out.articles=[...new Set(arts)].slice(0,20);
+ const protectorMatch=t.match(/Trust Protector:\s*\[?([^\]\n]+)\]?/i);
+ if(protectorMatch) out.protector=protectorMatch[1].trim();
+ const trusteeMatches=[...t.matchAll(/Co-Trustee(?:\s*\(.*?\))?:\s*\[?([^\]\n]+)\]?/gi)];
+ out.trustees=trusteeMatches.map(m=>m[1].trim()).slice(0,5);
+ const settlor=t.match(/Settlor\s*\/\s*Grantor:\s*\[?([^\]\n]+)\]?/i);
+ if(settlor) out.parties.push('Settlor: '+settlor[1].trim());
+ if(out.protector) out.parties.push('Protector: '+out.protector);
+ out.trustees.forEach(tr=>out.parties.push('Co-Trustee: '+tr));
+ const spIdx=t.toLowerCase().indexOf('spendthrift');
+ if(spIdx>-1) out.spendthrift=t.substring(Math.max(0,spIdx-100), spIdx+300).replace(/\s+/g,' ').slice(0,400);
+ return out;
+}
+function render(){
+ document.getElementById('counts').innerText=`Legal:${docs.filter(d=>d.folder==='Legal').length} | Learnings:${docs.filter(d=>d.folder==='Learnings').length} | All:${docs.length}`;
+ const folders={}; docs.forEach(d=>{folders[d.folder]=(folders[d.folder]||0)+1});
+ document.getElementById('folders').innerHTML=Object.entries(folders).map(([k,v])=>`<div class="tag">${k} ${v}</div>`).join('');
+ document.getElementById('doclist').innerHTML=docs.map((d,i)=>`<div class="doc ${active===i?'active':''}" onclick="openDoc(${i})"><b>${d.name}</b><br><span class="tag">${d.folder}</span> <span class="tag2">${(d.size/1024).toFixed(1)}k</span></div>`).join('');
+ if(docs.length && active===null) openDoc(0);
+}
+function openDoc(i){
+ active=i; const d=docs[i];
+ document.getElementById('viewHead').innerHTML=`<b>${d.name}</b> | ${d.folder} | <button onclick="copyExtract(${i})">COPY</button>`;
+ document.getElementById('viewText').innerText=d.text.slice(0,20000);
+ const ex=d.extracted;
+ let html=`<div class="extract-box"><h4>⚖️ LEGAL BRAIN</h4>`;
+ html+=`<b>Parties:</b><br>${ex.parties.map(p=>`<span class="tag2">${p}</span>`).join('')||'—'}<br>`;
+ html+=`<b>Statutes:</b> ${ex.statutes.map(s=>`<span class="tag">${s}</span>`).join('')||'—'}<br>`;
+ html+=`<b>Articles:</b><br><small>${ex.articles.join(' | ')}</small><br>`;
+ if(ex.spendthrift) html+=`<b>Spendthrift:</b><br><small style="color:#fffa">${ex.spendthrift}</small>`;
+ html+=`</div>`;
+ document.getElementById('extracted').innerHTML=html;
  render();
 }
-
-file.onchange = e=>loadFiles(e.target.files);
-drop.ondragover = e=>{e.preventDefault(); drop.style.borderColor='#00ff88'};
-drop.ondrop = e=>{e.preventDefault(); loadFiles(e.dataTransfer.files)};
-
-function render(){
- docList.innerHTML = ''; folders.innerHTML=''; const counts={};
- docs.forEach(d=>{ counts[d.folder]=(counts[d.folder]||0)+1; });
- counts['All']=docs.length;
- countsEl: countsDiv = document.getElementById('counts'); countsDiv.innerHTML = Object.entries(counts).map(([k,v])=>`${k}:${v}`).join(' | ');
- document.getElementById('folders').innerHTML = Object.keys(counts).map(f=>`<div><span class="tag">${f}</span> ${counts[f]}</div>`).join('');
- docs.forEach(d=>{
-  const el=document.createElement('div'); el.className='doc-item'+(d.id===activeId?' active':'');
-  el.innerHTML=`<b>${d.name}</b><br><span class="tag">${d.folder}</span> <span class="tag">${(d.text.length/1000).toFixed(1)}k</span>`;
-  el.onclick=()=>openDoc(d.id); docList.appendChild(el);
- });
- if(docs.length &&!activeId) openDoc(docs[0].id);
-}
-
-function openDoc(id){
- activeId=id; const d=docs.find(x=>x.id===id); render();
- docTitle.textContent=d.name; docMeta.textContent=`| ${d.folder} | ${d.date}`; doctext.value=d.text; window.VAULT.current=d;
- chat.innerHTML+=`<div>[OPENED] ${d.name}</div>`;
-}
-
-function searchVault(q){
- if(!q || q.length<2){searchRes.innerHTML=''; return;}
- const hits = docs.filter(d=>d.text.toLowerCase().includes(q.toLowerCase())).slice(0,10);
- searchRes.innerHTML = hits.map(h=>`<div onclick="openDoc(${h.id})" style="cursor:pointer;border-bottom:1px solid #222;padding:3px">📄 ${h.name} - ${h.folder}</div>`).join('') || 'No hits';
-}
-
-function suggestName(){
- const d=docs.find(x=>x.id===activeId); if(!d) return;
- const m = d.text.match(/(20\d{2})/); const year = m?m[1]:'2025';
- const base = d.folder==='Legal'? `Agreement-${year}` : d.folder==='Tax'? `TaxDoc-${year}` : `Doc-${year}`;
- const suggestion = `${year}-${d.folder}-${base}-${d.name}`.replace(/[^a-zA-Z0-9\-\.]/g,'-');
- doctext.value = `SUGGESTED NAME: ${suggestion}\n\n`+doctext.value;
-}
-
-function organizeDoc(){ const d=docs.find(x=>x.id===activeId); if(!d) return; alert(`Would move to /${d.folder}/${d.name} in ~/private-vault/ - hook ready for python sidecar`); }
-
-async function ask(){
- const question = q.value.trim(); if(!question) return;
- chat.innerHTML+=`<div><b>YOU:</b> ${question}</div>`; q.value='';
- // 1. Try local RAG first (offline)
- const relevant = docs.filter(d=>question.toLowerCase().split(' ').some(w=>w.length>3 && d.text.toLowerCase().includes(w))).slice(0,3);
- const context = relevant.map(r=>`[${r.name}]: ${r.text.slice(0,3000)}`).join('\n---\n');
- // 2. Try colibri if online
- try{
-  const res = await fetch('http://localhost:8000/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'glm-5.2',messages:[{role:'system',content:`You are private vault AI. Use these docs to answer: ${context.slice(0,12000)}`},{role:'user',content:question}]})});
-  const data = await res.json(); const ans = data.choices[0].message.content;
-  chat.innerHTML+=`<div><b>PRIVATE BOT (colibri):</b> ${ans}</div>`;
-  document.getElementById('status').textContent='ONLINE - colibri'; document.getElementById('status').className='online';
- }catch(e){
-  // offline fallback - simple keyword answer
-  let fallback = `OFFLINE SEARCH (colibri not running yet):\nFound in ${relevant.length} docs:\n`+relevant.map(r=>`• ${r.name} (${r.folder})`).join('\n');
-  if(activeId) fallback+=`\n\nCurrent doc excerpt: ${docs.find(x=>x.id===activeId).text.slice(0,800)}`;
-  chat.innerHTML+=`<div style="white-space:pre-wrap"><b>VAULT SEARCH:</b> ${fallback}\n\nTip: Run COLI_MODEL=/nvme/glm52_i4./coli serve for AI answers</div>`;
+function doAsk(q){
+ const input=document.getElementById('askInput'); if(q) input.value=q;
+ const query=(input.value||q||'').toLowerCase();
+ let out='';
+ if(!docs.length) out='Load docs first';
+ else if(query.includes('protector')) out=docs.map(d=>`${d.name}: Protector=${d.extracted.protector||'—'}`).join('\n');
+ else if(query.includes('trustee')) out=docs.map(d=>`${d.name}: ${d.extracted.trustees.join(', ')}`).join('\n');
+ else if(query.includes('spendthrift')) out=docs.map(d=>`${d.name}: ${d.extracted.spendthrift||'—'}`).join('\n---\n');
+ else if(query.includes('nrs')) out=docs.map(d=>`${d.name}: ${d.extracted.statutes.join(', ')}`).join('\n');
+ else{
+   const hits=[]; docs.forEach(d=>{
+     const idx=d.text.toLowerCase().indexOf(query);
+     if(idx>-1) hits.push(`${d.name}:...${d.text.substring(Math.max(0,idx-80), idx+200)}...`);
+   });
+   out=hits.length?hits.join('\n---\n'):'No hits';
  }
- chat.scrollTop = chat.scrollHeight;
+ document.getElementById('askOut').innerText=out;
 }
-function quickAsk(t){ q.value=t; ask(); }
-function exportManifest(){ const blob=new Blob([JSON.stringify(docs.map(d=>({name:d.name,folder:d.folder,size:d.size,date:d.date})),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='vault-index.json'; a.click(); }
-function clearVault(){ if(confirm('Clear all docs from browser memory? Files stay on disk')){docs=[]; activeId=null; render(); docTitle.textContent='Select a document'; doctext.value='';} }
-
-// check colibri
-fetch('http://localhost:8000/v1/models').then(()=>{status.textContent='ONLINE - colibri ready';status.className='online'}).catch(()=>{});
+document.getElementById('askInput').addEventListener('keydown',e=>{if(e.key==='Enter') doAsk();});
+document.getElementById('find').addEventListener('input',e=>{
+ const q=e.target.value.toLowerCase(); if(!q){document.getElementById('searchRes').innerHTML=''; return;}
+ let hits=[]; docs.forEach(d=>{
+   let idx=0,c=0; while((idx=d.text.toLowerCase().indexOf(q,idx))>-1 && c<3){ hits.push(`<div><b>${d.name}</b>:...${d.text.substring(Math.max(0,idx-60), idx+120)}...</div>`); idx+=q.length; c++; }
+ });
+ document.getElementById('searchRes').innerHTML=hits.join('');
+});
+function copyExtract(i){ navigator.clipboard.writeText(JSON.stringify(docs[i].extracted,null,2));}
+function exportIndex(){ const blob=new Blob([JSON.stringify(docs.map(d=>({name:d.name,folder:d.folder,extracted:d.extracted})),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='vault-legal-index.json'; a.click(); }
+function clearAll(){ if(confirm('Clear RAM?')){ docs.length=0; active=null; render(); document.getElementById('viewText').innerText='[Cleared]'; document.getElementById('extracted').innerHTML='';}}
+let watchOn=false;
+function learnPublic(){
+  const txt=document.getElementById('watchInput').value.trim(); if(!txt) return;
+  docs.push({name:`PublicAI ${new Date().toLocaleTimeString()}`, folder:'Learnings', text:txt, extracted:extractLegal(txt), size:txt.length, date:new Date().toISOString().slice(0,10)});
+  render();
+  document.getElementById('watchLog').innerHTML+=`<div style="color:#0ff">+ Learned ${txt.slice(0,60)}...</div>`;
+  document.getElementById('watchInput').value='';
+}
+function toggleWatch(){
+  watchOn=!watchOn; document.getElementById('watchStatus').innerText=watchOn?'ON':'OFF';
+  if(watchOn){ document.addEventListener('paste', onPasteWatch); logW('Watcher ON'); }
+  else document.removeEventListener('paste', onPasteWatch);
+}
+function onPasteWatch(e){
+  if(!watchOn) return;
+  const t=(e.clipboardData||window.clipboardData).getData('text');
+  if(t && t.length>50 && /NRS|Trust|Trustee|Nevada|Article|Spendthrift|Tax/i.test(t)){
+    document.getElementById('watchInput').value=t;
+    logW('Captured - click LEARN');
+  }
+}
+function logW(m){ document.getElementById('watchLog').innerHTML+=`<div>${new Date().toLocaleTimeString()} ${m}</div>`; }
 </script>
-</body></html>
+</body>
+</html>
